@@ -27,43 +27,64 @@ public class EmailRecieveService {
     static Map<String, InputStream> fileStreams = new HashMap<>();
 
 
-    @Scheduled(fixedDelay = 5000)
+
+
+    @Scheduled(fixedDelay = 10000)
     public void sendSimpleMessage() throws MessagingException, IOException {
-
         Folder inbox = store.getFolder("INBOX");
-        inbox.open(Folder.READ_ONLY);
-
+        inbox.open(Folder.READ_WRITE);
+        Message[] messages = inbox.getMessages();
 
         Arrays.stream(inbox.getMessages()).forEach(m -> {
 
             try {
-                Object content = m.getContent();
-                if (content instanceof String) {
-//                    Address[] in = m.getFrom();
-//                    for (Address address : in) {
-//                        System.out.println("FROM:" + address.toString());
-//                    }
-                    Arrays.stream(m.getFrom()).forEach(System.out::println);
-                    System.out.println("subject: " + m.getSubject()
-                            + "\nsend date: " + m.getSentDate()
-                            + "\ncontent: "  +  (String)content);
-                } else if (content instanceof Multipart) {
+                if(!m.getFlags().contains(Flags.Flag.DELETED)) {
 
-                    ArrayList <BodyPart> bps = new ArrayList<>();
-                    for (int i = 0; i < ((Multipart) content).getCount(); i++) {
-                        fileStreams.put(((Multipart) content).getBodyPart(i).getFileName(),
-                                ((Multipart) content).getBodyPart(i).getInputStream());
+                    try {
+                        Object content = m.getContent();
+                        if (content instanceof String) {
+                            //                    Address[] in = m.getFrom();
+                            //                    for (Address address : in) {
+                            //                        System.out.println("FROM:" + address.toString());
+                            //                    }
+                            Arrays.stream(m.getFrom()).forEach(System.out::println);
+                            System.out.println("subject: " + m.getSubject()
+                                    + "\nsend date: " + m.getSentDate()
+                                    + "\ncontent: "  +  (String)content);
+
+                        } else if (content instanceof Multipart) {
+
+                            ArrayList <BodyPart> bps = new ArrayList<>();
+                            for (int i = 0; i < ((Multipart) content).getCount(); i++) {
+                                fileStreams.put(((Multipart) content).getBodyPart(i).getFileName(),
+                                        ((Multipart) content).getBodyPart(i).getInputStream());
+                            }
+
+
+                        }
+
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    } catch (MessagingException e) {
+                        e.printStackTrace();
                     }
 
                 }
 
-            } catch (IOException e) {
-                e.printStackTrace();
+
+
             } catch (MessagingException e) {
                 e.printStackTrace();
             }
-
+            try {
+                m.setFlag(Flags.Flag.SEEN, true);
+            } catch (MessagingException e) {
+                e.printStackTrace();
+            }
         });
+
+
+        System.out.println("FileStream -> " + fileStreams.size());
 
         String zipFileName = patchfolder + "out.zip";
         FileOutputStream fos = new FileOutputStream(zipFileName);
@@ -82,11 +103,13 @@ public class EmailRecieveService {
             }
 
         });
+//        fos.close();
         zos.close();
-        System.exit(0);
 
 
-
+//        inbox.close();
+//        store.close();
+//        System.exit(0);
 
     }
 
