@@ -1,30 +1,85 @@
 package com.geo.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import javax.mail.MessagingException;
+import javax.mail.internet.MimeMessage;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
-//@Service
+
+@Service
 public class EmailSendService {
 
     @Autowired
     private JavaMailSender emailSender;
     String to = "sd_support_test@chelpipegroup.com";
-    String subject = "test";
+    String subject = "request";
     String text = "test";
-
+    Integer i = 0;
+    List<String> requests = new ArrayList<>();
+    @Value("${app.attachments}") String attachments;
+    {
+        requests.add("Сломался монитор, не показывает изображение");
+        requests.add("Не выходит в интернет компьютер");
+        requests.add("Зависает программаб долго грузится приложение");
+    }
 
     @Scheduled(fixedDelay = 5000)
+    public void sendMessageMethod() throws MessagingException, IOException {
+        if (new Random().nextBoolean() == true) {
+            System.out.println("no attachments");
+            sendSimpleMessage();
+        }  else {
+            System.out.println("attachments");
+            sendAttachmentsMessages();
+        }
+
+    }
+
+    private void sendAttachmentsMessages() throws MessagingException, IOException {
+        MimeMessage message = emailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true);
+
+        helper.setFrom("sd_support_test@chelpipegroup.com");
+        helper.setTo(to);
+        helper.setSubject(subject + i++);
+        helper.setText(requests.get(new Random().nextInt(requests.size())) + " attachments");
+
+        Files.walk(Paths.get(attachments))
+                .filter(Files::isRegularFile)
+                .forEach(f -> {
+                    FileSystemResource file = new FileSystemResource(f);
+                    try {
+                        helper.addAttachment(file.getFilename(), file);
+                    } catch (MessagingException e) {
+                        e.printStackTrace();
+                    }
+
+                });
+        emailSender.send(message);
+
+    }
+
+
     public void sendSimpleMessage() {
 
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom("sd_support_test@chelpipegroup.com");
         message.setTo(to);
-        message.setSubject(subject);
-        message.setText(text);
+        message.setSubject(subject + i++);
+        message.setText(requests.get(new Random().nextInt(requests.size())) + "   no attachments");
         emailSender.send(message);
         System.out.println("ok");
 

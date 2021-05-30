@@ -18,7 +18,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 
-@Service
+//@Service
 public class EmailRecieveService {
 
     @Autowired
