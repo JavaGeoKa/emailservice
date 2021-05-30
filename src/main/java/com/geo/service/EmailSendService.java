@@ -1,5 +1,6 @@
 package com.geo.service;
 
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
@@ -8,6 +9,8 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.thymeleaf.context.Context;
+import org.thymeleaf.spring5.SpringTemplateEngine;
 
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
@@ -24,10 +27,21 @@ public class EmailSendService {
 
     @Autowired
     private JavaMailSender emailSender;
+
+    @Autowired
+    private SpringTemplateEngine thymeleafTemplateEngine;
+
+
+
+
     String to = "sd_support_test@chelpipegroup.com";
     String subject = "request";
     String text = "test";
+    String htmlBody = "";
     Integer i = 0;
+
+
+
     List<String> requests = new ArrayList<>();
     @Value("${app.attachments}") String attachments;
     {
@@ -37,13 +51,14 @@ public class EmailSendService {
     }
 
     @Scheduled(fixedDelay = 5000)
-    public void sendMessageMethod() throws MessagingException, IOException {
+    public void sendMessageMethod() throws Exception {
         if (new Random().nextBoolean() == true) {
             System.out.println("no attachments");
-            sendSimpleMessage();
+            sendHtmlMessage();
+//            sendSimpleMessage();
         }  else {
             System.out.println("attachments");
-            sendAttachmentsMessages();
+//            sendAttachmentsMessages();
         }
 
     }
@@ -85,4 +100,16 @@ public class EmailSendService {
 
     }
 
+
+private void sendHtmlMessage() throws MessagingException {
+    MimeMessage message = emailSender.createMimeMessage();
+    MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+    helper.setFrom("sd_support_test@chelpipegroup.com");
+    helper.setTo(to);
+    helper.setSubject(subject + i++);
+    Context thymeleafContext = new Context();
+    htmlBody =  thymeleafTemplateEngine.process("template-thymeleaf.html", thymeleafContext);
+    helper.setText(htmlBody, true);
+    emailSender.send(message);
+}
 }
